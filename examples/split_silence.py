@@ -87,9 +87,21 @@ def get_chunk_times(in_filename, silence_threshold, silence_duration, start_time
         # No silence found.
         chunk_starts.append(start_time)
 
+    if end_time is None:
+        # use a fake end time
+        end_time = 10000000.
+
     if len(chunk_starts) > len(chunk_ends):
-        # Finished with non-silence.
-        chunk_ends.append(end_time or 10000000.)
+        if chunk_starts[-1] < end_time:
+            # Finished with non-silence.
+            chunk_ends.append(end_time)
+        else:
+            # ignore last chunk with negative duration
+            # this happens when silence_end comes after time
+            # example: 52.79 < 52.83
+            # line 'size=N/A time=00:20:52.79 bitrate=N/A speed=  30x    '
+            # line '[silencedetect @ 0x20f8fc0] silence_end: 1252.83 | silence_duration: 6.27579'
+            chunk_starts.pop()
 
     return list(zip(chunk_starts, chunk_ends))
 
